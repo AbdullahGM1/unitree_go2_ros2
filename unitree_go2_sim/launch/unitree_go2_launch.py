@@ -33,7 +33,7 @@ def generate_launch_description():
     gait_config = os.path.join(unitree_go2_sim, "config/gait/gait.yaml")
     links_config = os.path.join(unitree_go2_sim, "config/links/links.yaml")
     default_model_path = os.path.join(unitree_go2_description, "urdf/unitree_go2_robot.xacro")
-    default_world_path = os.path.join(unitree_go2_description, "worlds/default.sdf")
+    default_world_path = os.path.join(unitree_go2_description, "worlds/world.sdf")
 
     declare_use_sim_time = DeclareLaunchArgument(
         "use_sim_time",
@@ -171,14 +171,21 @@ def generate_launch_description():
     pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
     
     # Setup to launch the simulator and Gazebo world
+    # gz_sim = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')),
+    #     launch_arguments={'gz_args': PathJoinSubstitution([
+    #         unitree_go2_description,
+    #         'worlds',
+    #         'world.sdf'
+    #     ])}.items(),
+    # )
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')),
-        launch_arguments={'gz_args': PathJoinSubstitution([
-            unitree_go2_description,
-            'worlds',
-            'default.sdf'
-        ])}.items(),
+        launch_arguments={'gz_args': [
+            os.path.join(unitree_go2_description, 'worlds', 'world.sdf')
+        ]}.items(),
     )
     
     # Spawn robot in Gazebo Sim
