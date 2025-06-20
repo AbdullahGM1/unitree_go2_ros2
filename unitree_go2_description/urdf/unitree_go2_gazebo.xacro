@@ -14,15 +14,6 @@
     </plugin>
   </gazebo>
 
-  <!-- Robot-wide physics properties -->
-  <gazebo>
-    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics">
-      <engine>
-        <filename>gz-physics-ode-plugin</filename>
-      </engine>
-    </plugin>
-  </gazebo>
-
   <!-- ROS2 Control plugin -->
   <gazebo>
     <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
