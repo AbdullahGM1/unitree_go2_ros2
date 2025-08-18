@@ -6,7 +6,7 @@
 
     <xacro:macro name="leg" params="name mirror mirror_dae front_hind front_hind_dae">
 
-        <joint name="${name}_hip_joint" type="revolute">
+        <joint name="${ns_prefix}${name}_hip_joint" type="revolute">
             <xacro:if value="${(mirror_dae == False) and (front_hind_dae == True)}">
                 <origin rpy="0 0 0" xyz="${leg_offset_x} ${-leg_offset_y} 0"/>
             </xacro:if>
@@ -19,8 +19,8 @@
             <xacro:if value="${(mirror_dae == True) and (front_hind_dae == False)}">
                 <origin rpy="0 0 0" xyz="${-leg_offset_x} ${leg_offset_y} 0"/>
             </xacro:if>
-            <parent link="trunk"/>
-            <child link="${name}_hip_link"/>
+            <parent link="${ns_prefix}trunk"/>
+            <child link="${ns_prefix}${name}_hip_link"/>
             <axis xyz="1 0 0"/>
             <dynamics damping="${damping}" friction="${friction}"/>
             <xacro:if value="${(mirror_dae == True)}">
@@ -32,7 +32,7 @@
         </joint>
 
 
-        <link name="${name}_hip_link">
+        <link name="${ns_prefix}${name}_hip_link">
             <visual>
                 <xacro:if value="${(mirror_dae == True) and (front_hind_dae == True)}">
                     <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -67,17 +67,17 @@
             </inertial>
         </link>
 
-        <joint name="${name}_upper_leg_joint" type="revolute">
+        <joint name="${ns_prefix}${name}_upper_leg_joint" type="revolute">
             <origin rpy="0 0 0" xyz="0 ${thigh_offset*mirror} 0"/>
-            <parent link="${name}_hip_link"/>
-            <child link="${name}_upper_leg_link"/>
+            <parent link="${ns_prefix}${name}_hip_link"/>
+            <child link="${ns_prefix}${name}_upper_leg_link"/>
             <axis xyz="0 1 0"/>
             <dynamics damping="${damping}" friction="${friction}"/>
             <limit effort="${thigh_torque_max}" velocity="${thigh_velocity_max}" lower="${thigh_position_min}" upper="${thigh_position_max}"/>
         </joint>
 
 
-        <link name="${name}_upper_leg_link">
+        <link name="${ns_prefix}${name}_upper_leg_link">
             <visual>
                 <origin rpy="0 0 0" xyz="0 0 0"/>
                 <geometry>
@@ -107,17 +107,17 @@
         </link>
 
 
-        <joint name="${name}_lower_leg_joint" type="revolute">
+        <joint name="${ns_prefix}${name}_lower_leg_joint" type="revolute">
             <origin rpy="0 0 0" xyz="0 0 ${-thigh_length}"/>
-            <parent link="${name}_upper_leg_link"/>
-            <child link="${name}_lower_leg_link"/>
+            <parent link="${ns_prefix}${name}_upper_leg_link"/>
+            <child link="${ns_prefix}${name}_lower_leg_link"/>
             <axis xyz="0 1 0"/>
             <dynamics damping="${damping}" friction="${friction}"/>
             <limit effort="${calf_torque_max}" velocity="${calf_velocity_max}" lower="${calf_position_min}" upper="${calf_position_max}"/>
         </joint>
 
 
-        <link name="${name}_lower_leg_link">
+        <link name="${ns_prefix}${name}_lower_leg_link">
             <visual>
                 <origin rpy="0 0 0" xyz="0 0 0"/>
                 <geometry>
@@ -142,13 +142,13 @@
         </link>
 
 
-        <joint name="${name}_foot_joint" type="fixed">0
+        <joint name="${ns_prefix}${name}_foot_joint" type="fixed">
             <origin rpy="0 0 0" xyz="0 0 ${-(calf_length)}"/>
-            <parent link="${name}_lower_leg_link"/>
-            <child link="${name}_foot_link"/>
+            <parent link="${ns_prefix}${name}_lower_leg_link"/>
+            <child link="${ns_prefix}${name}_foot_link"/>
         </joint>
 
-        <link name="${name}_foot_link">
+        <link name="${ns_prefix}${name}_foot_link">
             <visual>
                 <origin rpy="0 0 0" xyz="0 0 0"/>
                 <geometry>
@@ -175,19 +175,19 @@
             <hardware>
                 <plugin>gz_ros2_control/GazeboSimSystem</plugin>
             </hardware>
-            <joint name="${name}_hip_joint">
+            <joint name="${ns_prefix}${name}_hip_joint">
                 <command_interface name="effort"/>
                 <state_interface name="position"/>
                 <state_interface name="velocity"/>
             </joint>
         
-            <joint name="${name}_upper_leg_joint">
+            <joint name="${ns_prefix}${name}_upper_leg_joint">
                 <command_interface name="effort"/>
                 <state_interface name="position"/>
                 <state_interface name="velocity"/>
             </joint>
         
-            <joint name="${name}_lower_leg_joint">
+            <joint name="${ns_prefix}${name}_lower_leg_joint">
                 <command_interface name="effort"/>
                 <state_interface name="position"/>
                 <state_interface name="velocity"/>

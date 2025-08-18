@@ -3,7 +3,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <!-- Lidar L1-->
-    <link name="lidar_l1_link">
+    <link name="${ns_prefix}lidar_l1_link">
         <inertial>
             <mass value="0.5"/>
             <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -30,13 +30,13 @@
     </link>
 
     <joint name="lidar_l1_joint" type="fixed">
-        <parent link="base_link"/>
-        <child link="lidar_l1_link"/>
+        <parent link="${ns_prefix}base_link"/>
+        <child link="${ns_prefix}lidar_l1_link"/>
         <!-- <origin rpy="2.94 0 1.5705" xyz="0.25 -0.038 -0.03"/> -->
         <origin rpy="2.879 0.0 1.5705" xyz="0.25 -0.038 -0.03"/>
     </joint>
 
-    <gazebo reference="lidar_l1_link">
+    <gazebo reference="${ns_prefix}lidar_l1_link">
         <sensor name="lidar_l1" type="gpu_lidar">
             <topic>unitree_lidar</topic>
             <update_rate>10</update_rate>
@@ -67,7 +67,7 @@
                 </noise>
             </lidar>
             <visualize>false</visualize>
-            <gz_frame_id>lidar_l1_link</gz_frame_id>
+            <gz_frame_id>${ns_prefix}lidar_l1_link</gz_frame_id>
             <always_on>1</always_on>
         </sensor>
     </gazebo>

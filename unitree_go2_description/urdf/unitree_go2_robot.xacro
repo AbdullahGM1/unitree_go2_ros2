@@ -4,6 +4,12 @@
     xmlns:xacro="http://www.ros.org/wiki/xacro">
 
     <xacro:arg name="DEBUG" default="false"/>
+    <xacro:arg name="namespace" default=""/>
+    <xacro:arg name="ros_control_config_file" default=""/>
+    
+    <!-- Create namespace prefix property -->
+    <xacro:property name="ns_prefix" value="${'$(arg namespace)/' if '$(arg namespace)' != '' else ''}" />
+    <xacro:property name="ros_control_config_file" value="$(arg ros_control_config_file)" />
 
     <xacro:include filename="$(find unitree_go2_description)/urdf/const.xacro"/>
     <xacro:include filename="$(find unitree_go2_description)/urdf/materials.xacro"/>
@@ -24,11 +30,11 @@
         <joint name="base_static_joint" type="fixed">
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <parent link="world"/>
-            <child link="base_link"/>
+            <child link="${ns_prefix}base_link"/>
         </joint>
     </xacro:if>
 
-    <link name="base_link">
+    <link name="${ns_prefix}base_link">
         <visual>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
@@ -39,11 +45,11 @@
 
     <joint name="floating_base" type="fixed">
         <origin rpy="0 0 0" xyz="0 0 0"/>
-        <parent link="base_link"/>
-        <child link="trunk"/>
+        <parent link="${ns_prefix}base_link"/>
+        <child link="${ns_prefix}trunk"/>
     </joint>
 
-    <link name="trunk">
+    <link name="${ns_prefix}trunk">
         <visual>
             <origin rpy="0 0 0" xyz="0 0 0"/>
             <geometry>
@@ -64,12 +70,12 @@
     </link>
 
     <joint name="imu_joint" type="fixed">
-        <parent link="trunk"/>
-        <child link="imu_link"/>
+        <parent link="${ns_prefix}trunk"/>
+        <child link="${ns_prefix}imu_link"/>
         <origin rpy="0 0 0" xyz="0 0 0"/>
     </joint>
 
-    <link name="imu_link">
+    <link name="${ns_prefix}imu_link">
         <inertial>
             <mass value="0.001"/>
             <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -90,7 +96,7 @@
     </link>
 
     <!-- Camera Link-->
-    <link name="camera_link">
+    <link name="${ns_prefix}camera_link">
         <inertial>
             <mass value="0.001"/>
             <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -113,8 +119,8 @@
         </collision>
     </link>
     <joint name="camera_joint" type="fixed">
-        <parent link="trunk"/>
-        <child link="camera_link"/>
+        <parent link="${ns_prefix}trunk"/>
+        <child link="${ns_prefix}camera_link"/>
         <origin rpy="0 0 0" xyz="0.326 0 0.043"/>
     </joint>
 

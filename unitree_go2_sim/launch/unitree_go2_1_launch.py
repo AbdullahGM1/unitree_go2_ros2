@@ -19,10 +19,10 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 
 
-
 def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time")
-    namespace = LaunchConfiguration("namespace")
+    # Fixed namespace for go2_1
+    namespace = "go2_1"
     base_frame = "base_link"
 
     unitree_go2_sim = launch_ros.substitutions.FindPackageShare(
@@ -31,9 +31,7 @@ def generate_launch_description():
         package="unitree_go2_description").find("unitree_go2_description")
     
     joints_config = os.path.join(unitree_go2_sim, "config/joints/joints.yaml")
-    ros_control_config = os.path.join(
-        unitree_go2_sim, "config/ros_control/ros_control.yaml"
-    )
+    # Use combined controller config that includes both go2 and go2_1 controllers
     ros_control_config_go2 = os.path.join(
         unitree_go2_sim, "config/ros_control/ros_control_go2.yaml"
     )
@@ -47,21 +45,16 @@ def generate_launch_description():
         default_value="true",
         description="Use simulation (Gazebo) clock if true",
     )
-    declare_rviz = DeclareLaunchArgument(
-        "rviz", default_value="true", description="Launch rviz"
-    )
+    # Note: No RViz launch argument - go2_1 uses RViz from main go2 launch
     declare_robot_name = DeclareLaunchArgument(
-        "robot_name", default_value="go2", description="Robot name"
-    )
-    declare_namespace = DeclareLaunchArgument(
-        "namespace", default_value="go2", description="Robot namespace"
+        "robot_name", default_value="go2_1", description="Robot name"
     )
     declare_lite = DeclareLaunchArgument(
         "lite", default_value="false", description="Lite"
     )
     declare_ros_control_file = DeclareLaunchArgument(
         "ros_control_file",
-        default_value=ros_control_config,
+        default_value=ros_control_config_go2,
         description="Ros control config path",
     )
     declare_gazebo_world = DeclareLaunchArgument(
@@ -71,7 +64,7 @@ def generate_launch_description():
     declare_gui = DeclareLaunchArgument(
         "gui", default_value="true", description="Use gui"
     )
-    declare_world_init_x = DeclareLaunchArgument("world_init_x", default_value="0.0")
+    declare_world_init_x = DeclareLaunchArgument("world_init_x", default_value="2.0")  # Different position
     declare_world_init_y = DeclareLaunchArgument("world_init_y", default_value="0.0")
     declare_world_init_z = DeclareLaunchArgument("world_init_z", default_value="0.375")
     declare_world_init_heading = DeclareLaunchArgument(
@@ -87,10 +80,7 @@ def generate_launch_description():
     robot_description = {"robot_description": Command([
         "xacro ", LaunchConfiguration("unitree_go2_description_path"),
         " namespace:=", namespace,
-        " ros_control_config_file:=", PythonExpression([
-            "'", ros_control_config_go2, "' if '", namespace, "' == 'go2' else ",
-            "'", ros_control_config, "'"
-        ])
+        " ros_control_config_file:=", ros_control_config_go2
     ])}
     
     # Global robot state publisher for Gazebo (no namespace for robot_description)
@@ -129,7 +119,7 @@ def generate_launch_description():
             {"publish_joint_states": True},
             {"publish_joint_control": True},
             {"publish_foot_contacts": False},
-            {"joint_controller_topic": "joint_group_effort_controller/joint_trajectory"},
+            {"joint_controller_topic": "joint_group_effort_controller_go2_1/joint_trajectory"},
             {"urdf": Command(['xacro ', LaunchConfiguration('unitree_go2_description_path')])},
             joints_config,
             links_config,
@@ -139,7 +129,7 @@ def generate_launch_description():
             {"close_loop_odom": True},
         ],
         remappings=[
-            ("/cmd_vel/smooth", PythonExpression(["'", namespace, "/cmd_vel' if '", namespace, "' != '' else '/cmd_vel'"]))
+            ("/cmd_vel/smooth", f"/{namespace}/cmd_vel")
         ],
     )
 
@@ -185,9 +175,9 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {"use_sim_time": use_sim_time},
-            {"base_link_frame": PythonExpression(["'", namespace, "/base_footprint' if '", namespace, "' != '' else 'base_footprint'"])},
-            {"odom_frame": PythonExpression(["'", namespace, "/odom' if '", namespace, "' != '' else 'odom'"])},
-            {"world_frame": PythonExpression(["'", namespace, "/odom' if '", namespace, "' != '' else 'odom'"])},
+            {"base_link_frame": f"{namespace}/base_footprint"},
+            {"odom_frame": f"{namespace}/odom"},
+            {"world_frame": f"{namespace}/odom"},
             {"publish_tf": True},
             {"frequency": 50.0},
             {"two_d_mode": True},
@@ -199,59 +189,36 @@ def generate_launch_description():
         remappings=[("odometry/filtered", "odom")],
     )
 
-    # Go2 static frame connection (map -> odom)
+    # Go2_1 static frame connection (map -> odom)
     map_to_odom_tf_node = Node(
         package='tf2_ros',
-        name='map_to_odom_tf_node',
+        name='map_to_odom_tf_node_go2_1',
         executable='static_transform_publisher',
         parameters=[{'use_sim_time': use_sim_time}],
         arguments=[
             '--x', '0', '--y', '0', '--z', '0',
             '--roll', '0', '--pitch', '0', '--yaw', '0',
-            '--frame-id', 'map', '--child-frame-id', 
-            PythonExpression(["'", namespace, "/odom' if '", namespace, "' != '' else 'odom'"])
+            '--frame-id', 'map', '--child-frame-id', f'{namespace}/odom'
         ],
     )
     
-    # Go2 URDF connection (base_footprint -> base_link)  
+    # Go2_1 URDF connection (base_footprint -> base_link)  
     base_footprint_to_base_link_tf_node = Node(
         package='tf2_ros',
-        name='base_footprint_to_base_link_tf_node',
+        name='base_footprint_to_base_link_tf_node_go2_1',
         executable='static_transform_publisher',
         parameters=[{'use_sim_time': use_sim_time}],
         arguments=[
             '--x', '0', '--y', '0', '--z', '0',
             '--roll', '0', '--pitch', '0', '--yaw', '0',
-            '--frame-id', PythonExpression(["'", namespace, "/base_footprint' if '", namespace, "' != '' else 'base_footprint'"]),
-            '--child-frame-id', PythonExpression(["'", namespace, "/base_link' if '", namespace, "' != '' else 'base_link'"])
+            '--frame-id', f'{namespace}/base_footprint',
+            '--child-frame-id', f'{namespace}/base_link'
         ],
     )
 
-    rviz2 = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d', os.path.join(unitree_go2_sim, "rviz/rviz.rviz")],
-        condition=IfCondition(LaunchConfiguration("rviz")),
-        # parameters=[{"use_sim_time": use_sim_time}]
-    )
+    # Note: No separate RViz - go2_1 will use the RViz instance from the main go2 launch
     
-    pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
-    
-    # Setup to launch the simulator and Gazebo world
-    gz_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')),
-        launch_arguments={
-            'gz_args': [PathJoinSubstitution([
-                unitree_go2_description,
-                'worlds',
-                'default.sdf'
-            ]), ' -r']  # Add -r flag to start unpaused
-        }.items(),
-    )
-    
-    # Spawn robot in Gazebo Sim
+    # Spawn robot in Gazebo Sim (don't start Gazebo again, assume it's running)
     gazebo_spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
@@ -266,36 +233,11 @@ def generate_launch_description():
         ],
     )
     
-    # Bridge ROS 2 topics to Gazebo Sim
-    gazebo_bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        name='gazebo_bridge',
-        output='screen',
-        parameters=[{'use_sim_time': use_sim_time}],
-        arguments=[
-            # Gazebo to ROS
-            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-            '/tf@tf2_msgs/msg/TFMessage@gz.msgs.Pose_V',
-        ],
-        remappings=[
-            # Remap sensor topics to namespace
-            ('/imu/data', PythonExpression(["'", namespace, "/imu/data' if '", namespace, "' != '' else '/imu/data'"])),
-            ('/joint_states', PythonExpression(["'", namespace, "/joint_states' if '", namespace, "' != '' else '/joint_states'"])),
-            ('/velodyne_points/points', PythonExpression(["'", namespace, "/velodyne_points/points' if '", namespace, "' != '' else '/velodyne_points/points'"])),
-            ('/unitree_lidar/points', PythonExpression(["'", namespace, "/unitree_lidar/points' if '", namespace, "' != '' else '/unitree_lidar/points'"])),
-            ('/odom', PythonExpression(["'", namespace, "/odom' if '", namespace, "' != '' else '/odom'"])),
-            ('/rgb_image', PythonExpression(["'", namespace, "/rgb_image' if '", namespace, "' != '' else '/rgb_image'"])),
-            ('/cmd_vel', PythonExpression(["'", namespace, "/cmd_vel' if '", namespace, "' != '' else '/cmd_vel'"])),
-            ('/joint_group_effort_controller/joint_trajectory', PythonExpression(["'", namespace, "/joint_group_effort_controller/joint_trajectory' if '", namespace, "' != '' else '/joint_group_effort_controller/joint_trajectory'"])),
-        ],
-    )
-    
-    # Additional bridge for sensor topics (with namespace support)
+    # Bridge ROS 2 topics to Gazebo Sim (sensor topics with go2_1 namespace support)
     sensor_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
-        name='sensor_bridge',
+        name='sensor_bridge_go2_1',
         output='screen',
         parameters=[{'use_sim_time': use_sim_time}],
         arguments=[
@@ -309,22 +251,22 @@ def generate_launch_description():
             
             # Control topics from ROS to Gazebo
             '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
-            '/joint_group_effort_controller/joint_trajectory@trajectory_msgs/msg/JointTrajectory]gz.msgs.JointTrajectory',
+            '/joint_group_effort_controller_go2_1/joint_trajectory@trajectory_msgs/msg/JointTrajectory]gz.msgs.JointTrajectory',
         ],
         remappings=[
             # Remap sensor topics to namespace
-            ('/imu/data', PythonExpression(["'", namespace, "/imu/data' if '", namespace, "' != '' else '/imu/data'"])),
-            ('/joint_states', PythonExpression(["'", namespace, "/joint_states' if '", namespace, "' != '' else '/joint_states'"])),
-            ('/velodyne_points/points', PythonExpression(["'", namespace, "/velodyne_points/points' if '", namespace, "' != '' else '/velodyne_points/points'"])),
-            ('/unitree_lidar/points', PythonExpression(["'", namespace, "/unitree_lidar/points' if '", namespace, "' != '' else '/unitree_lidar/points'"])),
-            ('/odom', PythonExpression(["'", namespace, "/odom' if '", namespace, "' != '' else '/odom'"])),
-            ('/rgb_image', PythonExpression(["'", namespace, "/rgb_image' if '", namespace, "' != '' else '/rgb_image'"])),
-            ('/cmd_vel', PythonExpression(["'", namespace, "/cmd_vel' if '", namespace, "' != '' else '/cmd_vel'"])),
-            ('/joint_group_effort_controller/joint_trajectory', PythonExpression(["'", namespace, "/joint_group_effort_controller/joint_trajectory' if '", namespace, "' != '' else '/joint_group_effort_controller/joint_trajectory'"])),
+            ('/imu/data', f'/{namespace}/imu/data'),
+            ('/joint_states', f'/{namespace}/joint_states'),
+            ('/velodyne_points/points', f'/{namespace}/velodyne_points/points'),
+            ('/unitree_lidar/points', f'/{namespace}/unitree_lidar/points'),
+            ('/odom', f'/{namespace}/odom'),
+            ('/rgb_image', f'/{namespace}/rgb_image'),
+            ('/cmd_vel', f'/{namespace}/cmd_vel'),
+            ('/joint_group_effort_controller_go2_1/joint_trajectory', f'/{namespace}/joint_group_effort_controller_go2_1/joint_trajectory'),
         ],
     )
     
-    # Use spawner nodes directly to handle the configuration step. (load → configure → activate)
+    # Use spawner nodes with dedicated go2_1 controller names
     controller_spawner_js = TimerAction(
         period=20.0,  # Wait for Gazebo to fully initialize
         actions=[
@@ -333,8 +275,8 @@ def generate_launch_description():
                 executable="spawner",
                 output="screen",
                 arguments=[
-                    "--controller-manager-timeout", "120",  # Longer timeout
-                    "joint_states_controller",  # No --inactive flag to ensure full activation
+                    "--controller-manager-timeout", "120",
+                    "joint_states_controller_go2_1",
                 ],
                 parameters=[{"use_sim_time": use_sim_time}],
             )
@@ -349,8 +291,8 @@ def generate_launch_description():
                 executable="spawner",
                 output="screen",
                 arguments=[
-                    "--controller-manager-timeout", "120",  # Longer timeout
-                    "joint_group_effort_controller",  # No --inactive flag to ensure full activation
+                    "--controller-manager-timeout", "120",
+                    "joint_group_effort_controller_go2_1",
                 ],
                 parameters=[{"use_sim_time": use_sim_time}],
             )
@@ -362,7 +304,7 @@ def generate_launch_description():
         period=25.0,  # Check status after controllers should be loaded
         actions=[
             ExecuteProcess(
-                cmd=["bash", "-c", "echo 'Checking controller status:' && ros2 control list_controllers"],
+                cmd=["bash", "-c", "echo 'Checking go2_1 controller status:' && ros2 control list_controllers"],
                 output='screen',
             )
         ]
@@ -372,9 +314,7 @@ def generate_launch_description():
         [
             # Launch arguments
             declare_use_sim_time,
-            declare_rviz,
             declare_robot_name,
-            declare_namespace,
             declare_lite,
             declare_ros_control_file,
             declare_gazebo_world,
@@ -385,12 +325,10 @@ def generate_launch_description():
             declare_world_init_heading,
             declare_description_path, 
             
-            # Gazebo and robot nodes first
-            gz_sim,
+            # Robot nodes (no Gazebo launch - assume it's running)
             global_robot_state_publisher,
             robot_state_publisher_node,
             gazebo_spawn_robot,
-            gazebo_bridge,
             sensor_bridge,
             
             # CHAMP controller nodes
@@ -410,7 +348,6 @@ def generate_launch_description():
             controller_spawner_effort,
             controller_status_check,
             
-            # Visualization (only if rviz flag is set)
-            rviz2,
+            # Note: Uses RViz from main go2 launch - no separate visualization
         ]
     )
